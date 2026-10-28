@@ -109,6 +109,7 @@ def test_run_agents_from_dashboard(repo: Path, monkeypatch: pytest.MonkeyPatch) 
     fake.write_text(FAKE_CLAUDE)
     fake.chmod(0o755)
     monkeypatch.setenv("SDLC_CLAUDE_BIN", str(fake))
+    monkeypatch.setenv("FAKE_SLEEP", "1")  # still running when the second start is tried, even on a fast machine
     c = config.load(repo)
     state.new_item(repo, c, "Refunds")
     client = TestClient(create_app(repo), headers=human.browser_headers())
