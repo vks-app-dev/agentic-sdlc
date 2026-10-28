@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-sdlc/event.schema.json",
+  "title": "Agentic SDLC event (one line of .sdlc/events.jsonl)",
+  "type": "object",
+  "required": ["ts", "source", "event"],
+  "properties": {
+    "ts": {"type": "string", "format": "date-time"},
+    "source": {"enum": ["engine", "hook", "agent"], "description": "engine = sdlc CLI state change; hook = Claude Code hook; agent = agent called `sdlc event`"},
+    "event": {"type": "string", "examples": ["item_created", "stage_started", "gate_waiting", "gate_approved", "gate_rejected", "plan_set", "task_start", "task_done", "task_fail", "agent_start", "agent_stop", "tool_use", "session_start", "session_stop"]},
+    "req": {"type": "string", "pattern": "^REQ-\\d+$"},
+    "stage": {"enum": ["requirements", "design", "development", "cicd", "qa", "release", "production", "monitoring"]},
+    "task": {"type": "string"},
+    "agent": {"type": "string", "description": "agent type, e.g. agentic-sdlc:dev-coder"},
+    "agent_id": {"type": "string"},
+    "session": {"type": "string"},
+    "status": {"type": "string"},
+    "detail": {"type": "string"},
+    "tool": {"type": "string"},
+    "by": {"type": "string"}
+  }
+}

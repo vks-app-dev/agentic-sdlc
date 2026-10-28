@@ -1,0 +1,22 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+dist/
+build/
+*.egg-info/
+
+# Dashboard source dependencies (the built UI in src/agentic_sdlc/dashboard/static is committed and shipped)
+dashboard/node_modules/
+
+# Local and generated
+plugin/evals/results/
+.DS_Store
+.env
+.env.*
+!.env.example
+
+# Maintainer's private notes
+docs/PARKED.md

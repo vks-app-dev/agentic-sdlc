@@ -1,0 +1,7 @@
+{
+  "name": "agentic-sdlc",
+  "version": "0.8.0",
+  "description": "Multi-agent AI-native SDLC: specialised agents per stage, human approval gates, parallel coders in worktrees, live status events.",
+  "author": { "name": "Agentic SDLC" },
+  "keywords": ["sdlc", "multi-agent", "workflow", "orchestration"]
+}

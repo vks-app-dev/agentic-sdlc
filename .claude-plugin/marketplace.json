@@ -1,0 +1,14 @@
+{
+  "name": "agentic-sdlc",
+  "description": "Agentic SDLC: AI agents run your software lifecycle, people approve every gate",
+  "owner": {
+    "name": "Agentic SDLC"
+  },
+  "plugins": [
+    {
+      "name": "agentic-sdlc",
+      "source": "./plugin",
+      "description": "Multi-agent AI-native SDLC framework"
+    }
+  ]
+}

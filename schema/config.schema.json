@@ -1,0 +1,335 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentic-sdlc/config.schema.json",
+  "title": "sdlc.config.yaml",
+  "type": "object",
+  "required": [
+    "version",
+    "project",
+    "stack",
+    "stages"
+  ],
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "project": {
+      "type": "object",
+      "required": [
+        "name",
+        "type"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "new",
+            "existing"
+          ]
+        },
+        "compliance": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "team_size": {
+          "type": "integer"
+        }
+      }
+    },
+    "stack": {
+      "type": "object",
+      "properties": {
+        "languages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "framework": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "package_manager": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "test_tools": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "commands": {
+          "type": "object",
+          "description": "Shell commands agents run. Common keys: install, test, lint, typecheck, format, build, dev",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "ui": {
+          "type": "boolean",
+          "description": "Has a user interface (QA runs the qa-ui-tester). Default: from the design's ux.md or the framework"
+        }
+      }
+    },
+    "integrations": {
+      "type": "object",
+      "properties": {
+        "tracker": {
+          "enum": [
+            "local",
+            "jira",
+            "linear",
+            "github-issues"
+          ]
+        },
+        "vcs": {
+          "enum": [
+            "git",
+            "github",
+            "gitlab"
+          ]
+        },
+        "ci": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "cloud": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "pull_requests": {
+          "type": "boolean",
+          "description": "Push sdlc/<REQ> and open a GitHub PR per work item (needs gh and a remote)"
+        },
+        "remote": {
+          "type": "string",
+          "description": "Git remote to push to (default origin)"
+        },
+        "base_branch": {
+          "type": "string",
+          "description": "Branch PRs target (default main, else master)"
+        },
+        "hosts": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "claude",
+              "copilot"
+            ]
+          },
+          "description": "AI tools that run the agents; copilot gets exported agents, prompts, MCP config and AGENTS.md"
+        },
+        "draft_prs": {
+          "type": "boolean"
+        },
+        "status_checks": {
+          "type": "boolean"
+        }
+      }
+    },
+    "stages": {
+      "type": "object",
+      "propertyNames": {
+        "enum": [
+          "requirements",
+          "design",
+          "development",
+          "cicd",
+          "qa",
+          "release",
+          "production",
+          "monitoring"
+        ]
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "autonomy": {
+            "enum": [
+              "L1",
+              "L2",
+              "L3",
+              "L4"
+            ]
+          },
+          "gate": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Approver roles; empty = no human gate"
+          },
+          "parallel_coders": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "tdd": {
+            "type": "boolean"
+          },
+          "max_attempts": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "security_review_on": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "work_types": {
+      "type": "object",
+      "description": "Per work type: which of requirements/design/development run, gate overrides, and design_if_size",
+      "propertyNames": {
+        "enum": [
+          "feature",
+          "change",
+          "bug",
+          "task"
+        ]
+      },
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "stages": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "requirements",
+                "design",
+                "development"
+              ]
+            }
+          },
+          "gates": {
+            "type": "object",
+            "propertyNames": {
+              "enum": [
+                "requirements",
+                "design",
+                "development"
+              ]
+            },
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "design_if_size": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "S",
+                "M",
+                "L"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "components": {
+      "type": "object",
+      "description": "Parts of the repo with their own folder and commands",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "frontend",
+              "backend",
+              "fullstack",
+              "other"
+            ]
+          },
+          "commands": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "models": {
+      "type": "object",
+      "properties": {
+        "orchestrator": {
+          "type": "string"
+        },
+        "agents": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "copilot": {
+          "type": "object",
+          "description": "Copilot model names per tier (opus, sonnet, haiku)",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "pricing": {
+      "type": "object",
+      "description": "USD per million tokens per model id",
+      "additionalProperties": {
+        "type": "object"
+      }
+    },
+    "environments": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "deploy": {
+            "type": "string"
+          },
+          "rollback": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "smoke": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "human_only": {
+            "type": "boolean"
+          },
+          "agent_ok": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
+  }
+}

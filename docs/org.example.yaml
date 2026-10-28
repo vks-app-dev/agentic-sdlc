@@ -1,0 +1,29 @@
+# Company policy for Agentic SDLC. Keep it in a company repo (e.g. acme/sdlc-policy) and point projects at it:
+#   sdlc.config.yaml:  org: ../sdlc-policy        (a path, relative to the repo)
+#   or the environment: SDLC_ORG_CONFIG=~/src/sdlc-policy/org.yaml
+# Order: Agentic SDLC defaults < `defaults` below < the project's config < `policy` below (enforced on every load).
+version: 1
+name: Acme
+min_version: "0.7.0"            # oldest agentic-sdlc the company supports; older CLIs refuse to run
+
+defaults:                       # where every project starts; projects may change these
+  integrations: {pull_requests: true, hosts: [claude]}
+  stages:
+    qa: {gate: [qa-lead]}
+    release: {gate: [release-manager]}
+
+policy:                         # projects may tighten these, never loosen them
+  required_stages: [requirements, design, planning, development, qa, release]
+  min_gates:                    # these roles are always among a gate's approvers
+    release: [release-manager]
+  compliance: [soc2]            # always in project.compliance
+  require: {lint: true, plan_check: true, checks: true}
+  required_commands: [secrets, audit]   # `sdlc check` fails until a project configures them
+  max_model: sonnet             # haiku < sonnet < opus: caps defaults and overrides
+  human_only_envs: [production, eu-prod]
+  pull_requests: true
+
+templates: templates            # folder next to this file: company versions of spec.md, design/README.md, ...
+projects:                       # local clones, for `sdlc portfolio`
+  - ../payments-api
+  - ../web-app
