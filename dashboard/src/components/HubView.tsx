@@ -101,7 +101,8 @@ export function HubView({ req, flow, current, running, user, goLive, version }: 
           }
           const f = n.f!;
           const done = f.agents.filter((a) => a.status === "done").length;
-          const pct = f.agents.length ? done / f.agents.length : f.status === "approved" ? 1 : 0;
+          const needed = f.agents.filter((a) => a.status !== "skipped").length;
+          const pct = needed ? done / needed : f.status === "approved" ? 1 : 0;
           const open = n.key === focus;
           if (open) {
             return (
@@ -125,7 +126,7 @@ export function HubView({ req, flow, current, running, user, goLive, version }: 
               {(!crowded || near) && <div className="hub-node-name">{f.title}</div>}
               {(!crowded || near) && (
                 <div className="muted small">
-                  {f.status === "approved" ? "✓ approved" : f.status === "awaiting_approval" ? "your review" : f.agents.length ? `${done}/${f.agents.length}` : "—"}
+                  {f.status === "approved" ? "✓ approved" : f.status === "awaiting_approval" ? "your review" : needed ? `${done}/${needed}` : "—"}
                 </div>
               )}
             </button>
@@ -150,7 +151,8 @@ function FocusPanel({ f, live, working, onClose }: {
         <Avatar seed={f.lead} stage={f.stage} size={40} working={working} />
         <div className="hub-focus-title">
           <div className="hub-node-name">{f.lead}</div>
-          <div className="muted small">{f.title} · {f.agents.filter((a) => a.status === "done").length}/{f.agents.length} done</div>
+          <div className="muted small">{f.title} · {f.agents.filter((a) => a.status === "done").length}/{f.agents.filter((a) => a.status !== "skipped").length} done
+            {f.agents.some((a) => a.status === "skipped") ? ` · ${f.agents.filter((a) => a.status === "skipped").length} not needed for this item` : ""}</div>
         </div>
         <span className="hub-collapse">−</span>
       </button>
@@ -163,13 +165,13 @@ function FocusPanel({ f, live, working, onClose }: {
                 const r = byName[a.name]?.runs.slice(-1)[0];
                 return (
                   <span key={a.name} className={`hub-sub ${a.status}`}
-                    title={`${agentTitle(a.name)}: ${a.status}${r?.last ? `\n${r.last}` : ""}${r?.took != null ? `\n${dur(r.took)}` : ""}${r?.result ? `\n${r.result}` : ""}`}>
+                    title={a.status === "skipped" ? `${agentTitle(a.name)}: ${a.reason ?? "not needed"} (decided by the architect)` : `${agentTitle(a.name)}: ${a.status}${r?.last ? `\n${r.last}` : ""}${r?.took != null ? `\n${dur(r.took)}` : ""}${r?.result ? `\n${r.result}` : ""}`}>
                     <span className="hub-sub-face">
                       <AgentAvatar name={a.name} size={38} working={a.status === "working"} />
                       {a.status === "done" && <span className="crew-tick">✓</span>}
                     </span>
                     <span className="hub-sub-name">{agentTitle(a.name)}</span>
-                    <span className={`hub-sub-state ${a.status}`}>{a.status}</span>
+                    <span className={`hub-sub-state ${a.status}`}>{a.status === "skipped" ? "not needed" : a.status}</span>
                   </span>
                 );
               })}

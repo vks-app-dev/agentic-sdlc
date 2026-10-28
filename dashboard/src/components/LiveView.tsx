@@ -5,7 +5,7 @@ import { AgentAvatar, Avatar } from "./Avatar";
 const TITLES: Record<string, string> = {
   requirements: "Requirements", design: "Design", planning: "Planning", development: "Development", qa: "QA", release: "Release",
 };
-const STATUS = { done: "Done", working: "Working", waiting: "Waiting" };
+const STATUS = { done: "Done", working: "Working", waiting: "Waiting", skipped: "Not needed" };
 
 /** A stage as a control room: the orchestrator directing the stage lead and its sub-agents, live. */
 export function LiveView({ req, current, version, user }: { req: string; current: string | null; version: number; user: string }) {
@@ -61,7 +61,7 @@ export function LiveView({ req, current, version, user }: { req: string; current
             <Avatar seed={data.lead ?? data.stage} stage={data.stage} size={48} working={data.status === "in_progress" && working} />
             <div className="live-node-body">
               <div className="live-name">{data.lead}</div>
-              <div className="muted small">{data.title} · {agents.filter((a) => a.status === "done").length}/{agents.filter((a) => a.planned).length} sub-agents done</div>
+              <div className="muted small">{data.title} · {agents.filter((a) => a.status === "done").length}/{agents.filter((a) => a.planned && a.status !== "skipped").length} sub-agents done</div>
             </div>
           </div>
 
@@ -147,7 +147,8 @@ function AgentCard({ a }: { a: NonNullable<LiveStage["agents"]>[number] }) {
           {r.result && a.status === "done" && <div className="live-result" title={r.result}>{r.result}</div>}
         </>
       ) : (
-        <div className="muted small">{a.status === "done" ? "Done (no activity recorded)" : "Waiting for its turn"}</div>
+        <div className="muted small">{a.status === "skipped" ? a.reason ?? "Not needed for this item"
+          : a.status === "done" ? "Done (no activity recorded)" : "Waiting for its turn"}</div>
       )}
     </div>
   );

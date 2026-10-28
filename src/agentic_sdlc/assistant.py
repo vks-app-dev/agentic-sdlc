@@ -168,6 +168,33 @@ def last_job(root: Path, cfg: dict[str, Any], running: set[str], paused: set[str
             "paused": it["id"] in paused and it["id"] not in running}
 
 
+# Design: which agent writes which workstream file. The architect ticks the workstreams an item needs in the
+# design README; an agent whose files are all unticked is not run for that item.
+WORKSTREAM_AGENTS = {"data": "design-data-api-designer", "api": "design-data-api-designer", "ux": "design-ux-designer",
+                     "operations": "design-ops-designer", "lld": "design-detail-designer",
+                     "security": "design-security-reviewer"}
+
+
+def design_choices(root: Path, req: str) -> dict[str, str]:
+    """agent -> why it is not needed, from the architect's unticked workstreams (empty before the architect decides)."""
+    p = root / "docs" / "design" / req / "README.md"
+    if not p.exists():
+        return {}
+    ticked, unticked = set(), {}
+    for m in re.finditer(r"^- \[( |x|X)\] (\w+)\.md:?\s*(.*)$", p.read_text(), re.M):
+        name = m.group(2)
+        if name not in WORKSTREAM_AGENTS:
+            continue
+        if m.group(1).strip():
+            ticked.add(WORKSTREAM_AGENTS[name])
+        else:
+            why = re.search(r"\(([^)]*)\)\s*$", m.group(3))
+            unticked[WORKSTREAM_AGENTS[name]] = (why.group(1) if why else m.group(3)).strip() or "not needed"
+    if not ticked:  # nothing decided yet (the template is all unticked)
+        return {}
+    return {a: why for a, why in unticked.items() if a not in ticked}
+
+
 def item_flow(root: Path, cfg: dict[str, Any], item: dict[str, Any], evs: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """What this item goes through (the stages that run for it, their agents in order, the human reviews) and
     what actually happened: each stage's status and, per agent, done / working / waiting from the hook events.
@@ -208,10 +235,14 @@ def item_flow(root: Path, cfg: dict[str, Any], item: dict[str, Any], evs: list[d
                 return "done", len(seen)
             return "waiting", 0
 
+        not_needed = design_choices(root, req) if s.name == "design" else {}
         agents = []
         for x in steps:
             sts, n = status(x.agent)
-            agents.append({"name": x.agent, "step": groups.index(x.parallel_group) + 1, "status": sts, "runs": n})
+            row = {"name": x.agent, "step": groups.index(x.parallel_group) + 1, "status": sts, "runs": n}
+            if x.agent in not_needed and n == 0:  # the architect decided this item does not need it
+                row.update(status="skipped", reason=f"Not needed: {not_needed[x.agent]}")
+            agents.append(row)
         planned = {x.agent for x in steps}
         extra = sorted({r["agent"] for r in mine if r["agent"] and r["agent"] not in planned
                         and r["agent"].split("-")[0] == {"requirements": "req", "planning": "plan", "release": "rel",

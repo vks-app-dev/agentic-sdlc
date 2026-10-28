@@ -293,3 +293,22 @@ def test_pause_closes_open_agents_and_resume_continues_the_session(repo: Path, m
     again = client.post("/api/items/REQ-001/resume").json()
     assert "--resume sess-42" in again["command"] and again["resumed_from"] == "sess-42"
     client.post(f"/api/runs/{again['id']}/stop")
+
+
+def test_agents_the_architect_left_out_show_as_not_needed(repo: Path) -> None:
+    from agentic_sdlc import assistant
+
+    c = config.load(repo)
+    state.new_item(repo, c, "CSV export", "feature")
+    d = repo / "docs" / "design" / "REQ-001"
+    d.mkdir(parents=True)
+    (d / "README.md").write_text("## Workstreams\n- [x] data.md: data\n- [x] api.md: api\n"
+                                 "- [ ] ux.md: UI/UX design (n/a: API only, no frontend)\n- [x] lld.md: lld\n")
+    it = state.load(repo, "REQ-001")
+    it["stages"]["design"]["status"] = "in_progress"
+    it["stages"]["design"]["started"] = events.now()
+    design = next(f for f in assistant.item_flow(repo, c, it, []) if f["stage"] == "design")
+    ux = next(a for a in design["agents"] if a["name"] == "design-ux-designer")
+    assert ux["status"] == "skipped" and ux["reason"] == "Not needed: n/a: API only, no frontend"
+    assert next(a for a in design["agents"] if a["name"] == "design-data-api-designer")["status"] == "waiting"
+    assert assistant.design_choices(repo, "REQ-002") == {}  # no design yet: nothing is skipped

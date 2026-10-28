@@ -7,7 +7,7 @@ const STAGE_STATE: Record<string, { label: string; cls: string }> = {
   in_progress: { label: "Working", cls: "working" }, blocked: { label: "Blocked", cls: "blocked" },
   pending: { label: "Not started", cls: "pending" }, skipped: { label: "Skipped", cls: "pending" },
 };
-const AGENT_TIP = { done: "done", working: "working now", waiting: "not started yet" };
+const AGENT_TIP = { done: "done", working: "working now", waiting: "not started yet", skipped: "not needed" };
 
 /** The item's own flow: the stages it really goes through, the agents planned for each (with what they actually
  *  did: done, working, waiting), the human reviews between stages, and any agent that ran without being planned. */
@@ -27,6 +27,7 @@ export function ItemFlow({ flow, user, current, running, lastRun, held = 0, goLi
         const st = paused && held && f.stage === current ? { label: `Needs you · ${held} thing${held > 1 ? "s" : ""}`, cls: "waiting" }
           : paused ? { label: "Started · agents not running", cls: "waiting" } : STAGE_STATE[f.status] ?? STAGE_STATE.pending;
         const done = f.agents.filter((a) => a.status === "done").length;
+        const needed = f.agents.filter((a) => a.status !== "skipped").length;
         const review = f.gate.length > 0 && !f.human;
         return (
           <li key={f.stage} className={`${review ? "gated" : ""} ${st.cls} ${f.stage === current ? "now" : ""}`}>
@@ -48,12 +49,12 @@ export function ItemFlow({ flow, user, current, running, lastRun, held = 0, goLi
             </div>
             <div className="flow-card">
               <b>{f.title}</b>
-              <span className={`flow-state ${st.cls}`}>{st.label}{f.agents.length ? ` · ${done}/${f.agents.length} agents done` : ""}</span>
+              <span className={`flow-state ${st.cls}`}>{st.label}{needed ? ` · ${done}/${needed} agents done` : ""}</span>
               {f.human ? <div className="muted small flow-agents">You deploy it: agents never deploy to production</div> : (
                 <div className="flow-crew item-crew">
                   {f.agents.map((a) => (
                     <span key={a.name} className={`crew-dot ${a.status}`}
-                      title={`${agentTitle(a.name)} (step ${a.step}): ${AGENT_TIP[a.status]}${a.runs > 1 ? `, ran ${a.runs} times` : ""}`}>
+                      title={a.status === "skipped" ? `${agentTitle(a.name)}: ${a.reason ?? "not needed"}` : `${agentTitle(a.name)} (step ${a.step}): ${AGENT_TIP[a.status]}${a.runs > 1 ? `, ran ${a.runs} times` : ""}`}>
                       <AgentAvatar name={a.name} size={24} working={a.status === "working"} />
                       {a.status === "done" && <span className="crew-tick">✓</span>}
                     </span>

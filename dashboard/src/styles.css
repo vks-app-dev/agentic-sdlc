@@ -1034,3 +1034,11 @@ textarea.ai-drafted { border-color: color-mix(in srgb, var(--accent) 50%, var(--
 .paused-agent { font-size: 13px; padding: 1px 0; color: var(--done); }
 .paused-agent.cut { color: var(--waiting); }
 @media (max-width: 700px) { .paused-grid { grid-template-columns: 1fr; } }
+/* agents the architect decided an item does not need */
+.hub-sub.skipped .hub-sub-face .avatar, .crew-dot.skipped .avatar, .live-agent.skipped .avatar { opacity: 0.35; filter: grayscale(1); }
+.hub-sub.skipped .hub-sub-name { color: var(--faint); text-decoration: line-through; }
+.hub-sub-state.skipped { color: var(--faint); background: var(--surface-2); }
+.crew-dot.skipped::after { content: "–"; position: absolute; right: -3px; bottom: -3px; width: 12px; height: 12px; border-radius: 50%;
+  background: var(--faint); color: #fff; font-size: 9px; display: grid; place-items: center; box-shadow: 0 0 0 2px var(--surface); }
+.live-agent.skipped { opacity: 0.6; border-style: dashed; }
+.live-status.skipped { background: var(--surface-2); color: var(--faint); }

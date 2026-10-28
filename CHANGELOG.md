@@ -14,6 +14,8 @@ same version; `sdlc doctor` warns when they differ.
 ### Fixed
 - Agents started outside the dashboard (e.g. from a terminal) count as running: the item no longer says "agents
   not running", the Live view shows the orchestrator directing, and their tasks are not reported as abandoned.
+- Design sub-agents the architect decided an item does not need (e.g. the UX designer for an API-only change)
+  show as "not needed" with the reason, and are left out of the "done" counts.
 - A stopped run no longer leaves its interrupted sub-agents showing as working, or the item as Running.
 - Task IDs keep their case in "needs you" messages.
 

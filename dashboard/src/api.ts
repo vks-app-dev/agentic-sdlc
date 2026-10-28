@@ -89,7 +89,7 @@ export interface FlowStage {
   automated: boolean;
   gate: string[];
   decided_by?: string | null;
-  agents: { name: string; step: number; status: "done" | "working" | "waiting"; runs: number }[];
+  agents: { name: string; step: number; status: "done" | "working" | "waiting" | "skipped"; runs: number; reason?: string }[];
   extra: { name: string; status: "done" | "working" | "waiting"; runs: number }[];
 }
 
@@ -535,7 +535,7 @@ export interface LiveStage {
   gate?: string[];
   running?: boolean;
   orchestrator?: { status: "working" | "idle"; last: string | null; last_ts: string | null; actions: number };
-  agents?: { name: string; step: number; status: "done" | "working" | "waiting"; planned: boolean; runs: LiveRun[] }[];
+  agents?: { name: string; step: number; status: "done" | "working" | "waiting" | "skipped"; planned: boolean; runs: LiveRun[]; reason?: string }[];
   handoffs?: { ts: string; kind: "dispatch" | "done" | "orchestrator" | "human" | "engine"; agent: string; text: string; took?: number | null }[];
 }
 
