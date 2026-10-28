@@ -94,6 +94,10 @@ def live_agents(evs: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Subagents that started and have not stopped, with their latest action."""
     agents: dict[str, dict[str, Any]] = {}
     for e in evs:
+        if e["event"] == "run_finished" and e.get("req"):
+            # a run that ended (finished, failed, stopped or paused) leaves none of its sub-agents working
+            agents = {k: a for k, a in agents.items() if a.get("req") != e["req"]}
+            continue
         aid = e.get("agent_id")
         if not aid:
             continue
@@ -197,7 +201,9 @@ def create_app(root: Path) -> FastAPI:
         plugin = plugin_dir()
         return {"user": _who(), "project": c["project"]["name"],
                 "team": assistant.team(c, live_agents(events.read(root)), plugin),
-                "last_job": assistant.last_job(root, c, running()),
+                "last_job": assistant.last_job(root, c, running(), {
+                    r["req"] for r in runner.list() if r["status"] == "paused"
+                    and r["id"] == next(x["id"] for x in runner.list() if x["req"] == r["req"])}),
                 "work_types": [{"name": n, "title": config.work_type(c, n)["title"],
                                 "purpose": config.work_type(c, n)["purpose"], "plan": assistant.plan(c, n)}
                                for n in WORK_TYPES]}
@@ -569,11 +575,34 @@ def create_app(root: Path) -> FastAPI:
             raise HTTPException(404, f"No run {run_id}") from e
 
     @app.post("/api/runs/{run_id}/stop", dependencies=[Depends(person)])
-    def stop_run(run_id: str) -> dict[str, Any]:
+    def stop_run(run_id: str, pause: bool = False) -> dict[str, Any]:
+        """Stop the agents. With pause=true the work so far is kept and Resume continues where they were."""
         try:
-            return runner.stop(run_id).public()
+            return runner.stop(run_id, pause).public()
         except KeyError as e:
             raise HTTPException(404, f"No run {run_id}") from e
+
+    @app.post("/api/items/{req}/resume", dependencies=[Depends(person)])
+    def resume_run(req: str) -> dict[str, Any]:
+        """Continue a paused item: tasks the pause interrupted are made ready again, then the same Claude Code
+        conversation carries on (a fresh run if that conversation cannot be found)."""
+        if runner.active(req):
+            raise HTTPException(409, "Agents are already running for this item")
+        last = next((r for r in runner.list() if r["req"] == req), None)
+        guard(blockers.reset_tasks, root, req)
+        held = [b for b in blockers.blocking(guard(blockers.find, root, cfg(), req)) if b["code"] != "orphan_task"]
+        if held:
+            raise HTTPException(409, f"{len(held)} thing{'s' * (len(held) != 1)} need you first: "
+                                     + "; ".join(b["title"] for b in held))
+        session = last.get("session_id") if last and last["status"] == "paused" else None
+        try:
+            run = runner.start(req, session)
+        except RuntimeError as e:
+            raise HTTPException(409, str(e)) from e
+        if last and last["status"] == "paused":
+            (root / last["log"]).with_suffix(".paused").unlink(missing_ok=True)
+            runner.runs[last["id"]].status = "stopped"  # resumed: no longer the paused one
+        return run.public()
 
     @app.get("/api/stream")
     async def stream(request: Request) -> StreamingResponse:

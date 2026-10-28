@@ -1018,3 +1018,7 @@ textarea.ai-drafted { border-color: color-mix(in srgb, var(--accent) 50%, var(--
 .hub-center .live-status { align-self: center; }
 /* the open stage is shown only by its highlighted circle */
 .hub-node.open::after { content: none; }
+.run-state.paused { color: var(--waiting); font-weight: 700; }
+.run-state.running { color: var(--running); font-weight: 700; }
+.run-paused { padding: 8px 12px; background: var(--waiting-bg); color: var(--waiting); font-size: 13px; }
+.golive-pill.paused { background: var(--waiting-bg); color: var(--waiting); }

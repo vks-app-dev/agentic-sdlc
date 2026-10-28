@@ -268,3 +268,26 @@ def test_live_view_shows_orchestrator_agents_and_handoffs(repo: Path) -> None:
     assert coder["status"] == "working" and coder["runs"][0]["last"] == "Edit: app/main.py"
     assert [h["kind"] for h in v["handoffs"]] == ["dispatch", "orchestrator"]  # newest first
     assert TestClient(create_app(repo)).get("/api/items/REQ-001/live").json()["stage"] == "development"
+
+
+def test_pause_closes_open_agents_and_resume_continues_the_session(repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from agentic_sdlc.dashboard.server import live_agents
+
+    fake = repo / "fake-claude"
+    fake.write_text('#!/bin/sh\necho \'{"type":"system","subtype":"init","model":"fake","session_id":"sess-42"}\'\n'
+                    'sleep 30\n')
+    fake.chmod(0o755)
+    monkeypatch.setenv("SDLC_CLAUDE_BIN", str(fake))
+    state.new_item(repo, config.load(repo), "Refunds")
+    client = TestClient(create_app(repo), headers=human.browser_headers())
+    run = client.post("/api/items/REQ-001/run").json()
+    events.emit(repo, "agent_start", agent="agentic-sdlc:req-analyst", agent_id="a1", req="REQ-001")
+    assert [a["agent_id"] for a in live_agents(events.read(repo))] == ["a1"]
+    wait_for(lambda: "sess-42" in (repo / run["log"]).read_text())
+    paused = client.post(f"/api/runs/{run['id']}/stop", params={"pause": "true"}).json()
+    assert paused["status"] == "paused" and paused["session_id"] == "sess-42"
+    wait_for(lambda: "run_finished" in [e["event"] for e in events.read(repo)])
+    assert live_agents(events.read(repo)) == []  # the interrupted sub-agent no longer shows as working
+    again = client.post("/api/items/REQ-001/resume").json()
+    assert "--resume sess-42" in again["command"] and again["resumed_from"] == "sess-42"
+    client.post(f"/api/runs/{again['id']}/stop")

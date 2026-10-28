@@ -49,11 +49,13 @@ class Run:
     cost_usd: float | None = None
     error: str | None = None  # why it failed, in words a person can act on
     summary: str | None = None  # the run's own last words: where it stopped and why
+    session_id: str | None = None  # Claude Code's conversation, so a paused run can be resumed
+    resumed_from: str | None = None
     _proc: subprocess.Popen | None = field(default=None, repr=False)
 
     def public(self) -> dict[str, Any]:
         d = {k: getattr(self, k) for k in ("id", "req", "log", "started", "pid", "status", "exit_code", "ended",
-                                           "cost_usd", "error", "summary")}
+                                           "cost_usd", "error", "summary", "session_id", "resumed_from")}
         d["command"] = shlex.join(self.command)
         return d
 
@@ -84,14 +86,17 @@ class Runner:
             # the same form as events.now() (UTC), so past and new runs sort together
             started = datetime.strptime(stamp, "%Y%m%d-%H%M%S").astimezone(timezone.utc).isoformat(timespec="seconds")
             status = "stopped" if result is None else "failed" if result.get("is_error") else "finished"
+            if result is None and (log.with_suffix(".paused")).exists():
+                status = "paused"
             run = Run(run_id, req, [], str(log.relative_to(self.root)), started, status=status,
                       ended=ended or started, cost_usd=reported_cost(log))
             run.summary = final_words(log)
+            run.session_id = session_of(log)
             if status == "failed":
                 run.error = failure_reason(log)
             self.runs[run_id] = run
 
-    def command(self, req: str) -> list[str]:
+    def command(self, req: str, resume: str | None = None) -> list[str]:
         """The headless Claude Code call. SDLC_CLAUDE_BIN overrides the binary (tests use a fake)."""
         binary = os.environ.get("SDLC_CLAUDE_BIN", "claude")
         cfg = self.cfg()
@@ -113,8 +118,14 @@ class Runner:
         if (stack.get("ui") or (stack.get("framework") or "") in UI_FRAMEWORKS
                 or any(c["kind"] in ("frontend", "fullstack") for c in config.components(cfg))):
             allowed += ["Bash(npx playwright:*)"]  # browser smoke tests and the UI tester
-        cmd = [binary, "-p", f"/agentic-sdlc:sdlc-run {req} --auto", "--output-format", "stream-json", "--verbose",
+        prompt = f"/agentic-sdlc:sdlc-run {req} --auto"
+        if resume:  # continue the paused conversation: the orchestrator keeps what it knew
+            prompt = (f"You were paused by a person. Continue {prompt} from where you stopped. First run `sdlc next {req}` "
+                      "to see the current state; sub-agents that were interrupted did not finish, so start them again.")
+        cmd = [binary, "-p", prompt, "--output-format", "stream-json", "--verbose",
                "--permission-mode", "acceptEdits", "--allowedTools", *allowed]
+        if resume:
+            cmd += ["--resume", resume]
         found = plugin_dir()
         if found.exists():
             cmd += ["--plugin-dir", str(found)]
@@ -124,14 +135,15 @@ class Runner:
     def active(self, req: str) -> Run | None:
         return next((r for r in self.runs.values() if r.req == req and r.status == "running"), None)
 
-    def start(self, req: str) -> Run:
+    def start(self, req: str, resume: str | None = None) -> Run:
         with self.lock:
             if self.active(req):
                 raise RuntimeError(f"Agents are already running for {req}")
             self.logs.mkdir(parents=True, exist_ok=True)
             run_id = f"{req}-{time.strftime('%Y%m%d-%H%M%S')}"
             log = self.logs / f"{run_id}.log"
-            run = Run(run_id, req, self.command(req), str(log.relative_to(self.root)), events.now())
+            run = Run(run_id, req, self.command(req, resume), str(log.relative_to(self.root)), events.now())
+            run.resumed_from = resume
             f = open(log, "w")
             f.write(f"$ {shlex.join(run.command)}\n\n")
             f.flush()
@@ -143,8 +155,8 @@ class Runner:
                 raise RuntimeError(f"Could not start Claude Code ({run.command[0]}): {e}") from e
             run.pid, run._proc = proc.pid, proc
             self.runs[run_id] = run
-        events.emit(self.root, "run_started", req=req, detail=f"/sdlc-run {req} from dashboard", status="running",
-                    run=run_id)
+        events.emit(self.root, "run_started", req=req, status="running", run=run_id,
+                    detail=f"resumed /sdlc-run {req} from dashboard" if resume else f"/sdlc-run {req} from dashboard")
         threading.Thread(target=self._wait, args=(run, f), daemon=True).start()
         return run
 
@@ -159,16 +171,21 @@ class Runner:
         if run.status == "failed":
             run.error = failure_reason(self.root / run.log)
         run.summary = final_words(self.root / run.log)
+        run.session_id = session_of(self.root / run.log)
         events.emit(self.root, "run_finished", req=run.req, status=run.status, run=run.id,
                     detail=(run.error or f"exit {code}") + (f" · ${run.cost_usd:.2f}" if run.cost_usd else ""),
                     cost_usd=run.cost_usd)
 
-    def stop(self, run_id: str) -> Run:
+    def stop(self, run_id: str, pause: bool = False) -> Run:
+        """Stop a run. Paused: the work so far is kept and Resume continues the same conversation."""
         run = self.runs.get(run_id)
         if not run:
             raise KeyError(run_id)
         if run.status == "running" and run._proc:
-            run.status = "stopped"
+            run.status = "paused" if pause else "stopped"
+            run.session_id = session_of(self.root / run.log)
+            if pause:  # remembered across dashboard restarts
+                (self.root / run.log).with_suffix(".paused").write_text(run.session_id or "")
             try:
                 os.killpg(run._proc.pid, signal.SIGTERM)  # the whole session: claude and its children
             except ProcessLookupError:
@@ -232,6 +249,18 @@ def failure_reason(log: Path) -> str | None:
         said = next((ln for ln in reversed(lines) if ln.strip() and not ln.startswith("{")), "")
     low = said.lower()
     return next((hint for key, hint in _HINTS if key in low), said[:300] or None)
+
+
+def session_of(log: Path) -> str | None:
+    """The Claude Code session id from the run's first `init` message."""
+    try:
+        with open(log, errors="replace") as fh:
+            for line in fh:
+                if '"subtype":"init"' in line.replace(" ", ""):
+                    return json.loads(line).get("session_id")
+    except (OSError, json.JSONDecodeError):
+        return None
+    return None
 
 
 def final_words(log: Path) -> str | None:

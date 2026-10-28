@@ -159,7 +159,9 @@ export function ItemDetail({ id, project, version, openFile, select, refresh, cl
       <div className="detail-head">
         <span className="id">{item.id}</span>
         <TypeBadge type={typeOf(item)} />
-        {item.go_live ? (
+        {!item.run && item.latest_run?.status === "paused" ? (
+          <span className="golive-pill paused">⏸ Paused</span>
+        ) : item.go_live ? (
           <span className={`golive-pill ${item.go_live.state}`}>
             {item.go_live.state === "live" ? `✓ Live${item.go_live.deployed?.version ? ` · ${item.go_live.deployed.version}` : ""}` : "🚀 Ready to go live"}
           </span>
@@ -228,13 +230,19 @@ export function ItemDetail({ id, project, version, openFile, select, refresh, cl
 
       {nextMsg && (
         <div className="next next-row">
-          <span><b>Next:</b> {item.blockers?.some((b) => b.blocking !== false) && !item.run
+          <span><b>Next:</b> {!item.run && item.latest_run?.status === "paused"
+            ? "The agents are paused. Resume continues where they stopped."
+            : item.blockers?.some((b) => b.blocking !== false) && !item.run
             ? "The things above need you first, then the agents can start."
             : nextMsg}</span>
-          {canRun && !!item.blockers?.some((b) => b.blocking !== false) && !item.run && (
+          {!item.run && item.latest_run?.status === "paused" && (
+            <button className="btn primary" onClick={() => api.resume(item.id).then((r) => { setLogHidden(false); setLogRun(r); refresh(); },
+              (e: Error) => alert(e.message))}>▶ Resume</button>
+          )}
+          {!(item.latest_run?.status === "paused" && !item.run) && canRun && !!item.blockers?.some((b) => b.blocking !== false) && !item.run && (
             <button className="btn primary" disabled title="Fix the items in “Before agents can start” first">▶ Run agents</button>
           )}
-          {canRun && !(item.blockers?.some((b) => b.blocking !== false) && !item.run) && (
+          {!(item.latest_run?.status === "paused" && !item.run) && canRun && !(item.blockers?.some((b) => b.blocking !== false) && !item.run) && (
             <span className="actions" style={{ marginTop: 0 }}>
               <RunButton req={item.id} run={item.run} onStarted={(r) => { setLogHidden(false); setLogRun(r); }} />
               {item.run && !logRun && (
@@ -245,7 +253,8 @@ export function ItemDetail({ id, project, version, openFile, select, refresh, cl
         </div>
       )}
       {item.can_retype && !item.run && <Retype item={item} project={project} done={refresh} />}
-      {logRun && <RunLog run={logRun} onClose={() => { setLogHidden(true); setLogRun(null); }} />}
+      {logRun && <RunLog run={logRun} onClose={() => { setLogHidden(true); setLogRun(null); }}
+        onResumed={(r) => { setLogRun(r); refresh(); }} />}
       {!logRun && (item.run || item.latest_run) && (() => {
         const r = (item.run ?? item.latest_run)!;
         return (

@@ -7,10 +7,13 @@ same version; `sdlc doctor` warns when they differ.
 
 ### Added
 - Screenshots in the README.
+- ⏸ Pause and ▶ Resume for agent runs: Pause stops the agents and keeps their work; Resume makes interrupted
+  tasks ready again and continues the same Claude Code conversation where it stopped. Stop still ends a run.
 
 ### Fixed
 - Agents started outside the dashboard (e.g. from a terminal) count as running: the item no longer says "agents
   not running", the Live view shows the orchestrator directing, and their tasks are not reported as abandoned.
+- A stopped run no longer leaves its interrupted sub-agents showing as working, or the item as Running.
 - Task IDs keep their case in "needs you" messages.
 
 ## [0.8.0] - 2026-10-28

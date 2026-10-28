@@ -140,7 +140,7 @@ def team(cfg: dict[str, Any], live: list[dict[str, Any]], plugin_dir: Path | Non
     return out
 
 
-def last_job(root: Path, cfg: dict[str, Any], running: set[str]) -> dict[str, Any] | None:
+def last_job(root: Path, cfg: dict[str, Any], running: set[str], paused: set[str] = frozenset()) -> dict[str, Any] | None:
     """The most recently touched unfinished item and what it needs next."""
     open_items = sorted((i for i in state.load_all(root) if i["status"] != "done"), key=lambda i: i["updated"],
                         reverse=True)
@@ -164,7 +164,8 @@ def last_job(root: Path, cfg: dict[str, Any], running: set[str]) -> dict[str, An
         if can else "")
     return {"req": it["id"], "title": it["title"], "type": state.item_type(it), "updated": it["updated"],
             "stage": stage, "stage_title": title, "action": nxt["action"], "message": message, "can_resume": can and it["id"] not in running,
-            "running": it["id"] in running, "turn": who, "others": len(open_items) - 1}
+            "running": it["id"] in running, "turn": who, "others": len(open_items) - 1,
+            "paused": it["id"] in paused and it["id"] not in running}
 
 
 def item_flow(root: Path, cfg: dict[str, Any], item: dict[str, Any], evs: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -174,6 +175,10 @@ def item_flow(root: Path, cfg: dict[str, Any], item: dict[str, Any], evs: list[d
     req = item["id"]
     runs: dict[str, dict[str, Any]] = {}  # agent_id -> {agent, start, stop}
     for e in evs:
+        if e["event"] == "run_finished" and e.get("req") == req:  # the run ended: nothing of it still works
+            for r in runs.values():
+                r["stop"] = r["stop"] or e["ts"]
+            continue
         aid = e.get("agent_id")
         if not aid:
             continue
@@ -273,6 +278,10 @@ def live_view(root: Path, cfg: dict[str, Any], item: dict[str, Any], evs: list[d
                                      "text": str(e.get("detail"))[:120]})
         elif e["event"] in ("gate_waiting", "gate_approved", "gate_rejected", "human_needed", "deployed", "smoke",
                             "run_started", "run_finished"):
+            if e["event"] == "run_finished":  # the run ended: what it left open was interrupted
+                for r in runs.values():
+                    if r["stop"] is None:
+                        r.update(stop=e["ts"], result=f"Interrupted: the run was {e.get('status') or 'stopped'}")
             handoffs.append({"ts": e["ts"], "kind": "human" if e["event"].startswith(("gate", "human")) else "engine",
                              "agent": e.get("by") or "engine", "text": e["event"].replace("_", " ")
                              + (f": {e.get('detail')}" if e.get("detail") else "")})

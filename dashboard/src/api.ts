@@ -70,12 +70,14 @@ export interface Run {
   log: string;
   started: string;
   pid: number | null;
-  status: "running" | "finished" | "failed" | "stopped";
+  status: "running" | "finished" | "failed" | "stopped" | "paused";
   exit_code: number | null;
   ended: string | null;
   error?: string | null;
   summary?: string | null;
   cost_usd?: number | null;
+  session_id?: string | null;
+  resumed_from?: string | null;
 }
 
 export interface FlowStage {
@@ -263,8 +265,9 @@ export const api = {
   dismiss: (rid: string) => post(`/api/pending/${rid}/dismiss`, {}),
   runs: () => req<Run[]>("/api/runs"),
   runLog: (runId: string) => req<{ run: Run; text: string }>(`/api/runs/${runId}/log`),
-  stopRun: (runId: string) =>
-    req<Run>(`/api/runs/${runId}/stop`, { method: "POST", headers: { "X-SDLC-Human": humanToken() } }),
+  stopRun: (runId: string, pause = false) =>
+    req<Run>(`/api/runs/${runId}/stop${pause ? "?pause=true" : ""}`, { method: "POST", headers: { "X-SDLC-Human": humanToken() } }),
+  resume: (id: string) => req<Run>(`/api/items/${id}/resume`, { method: "POST", headers: { "X-SDLC-Human": humanToken() } }),
 };
 
 export function since(ts: string | undefined, now = Date.now()): string {
@@ -327,6 +330,7 @@ export interface LastJob {
   can_resume: boolean;
   running: boolean;
   turn: "agents" | "you" | "waiting";
+  paused?: boolean;
   others: number;
 }
 

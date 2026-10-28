@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  agentTitle, homeApi, since, type Home as HomeData, type LastJob, type Link, type Proposal, type Run,
+  agentTitle, api, homeApi, since, type Home as HomeData, type LastJob, type Link, type Proposal, type Run,
   type Started, type TeamLead, type WorkTypeName,
 } from "../api";
 import { AgentAvatar, Avatar } from "./Avatar";
@@ -350,7 +350,10 @@ function ResumeCard({ job, resumed, openItem, onResumed }: {
           {job.message && <div className="resume-msg">{job.message}</div>}
         </div>
         <div className="resume-actions">
-          {job.running ? (
+          {job.paused ? (
+            <button className="btn primary" onClick={() => api.resume(job.req).then((r) => { onResumed(r); openItem(job.req); },
+              (e: Error) => alert(e.message))}>▶ Resume (paused)</button>
+          ) : job.running ? (
             <button className="btn primary" onClick={() => openItem(job.req)}>
               <span className="dot-live pulse" /> Agents working · watch on the board
             </button>
