@@ -218,3 +218,25 @@ def test_a_person_answers_the_agents_question(repo: Path) -> None:
     spec = (repo / "specs" / f"{req}.md").read_text()
     assert "## Decisions" in spec and "**Accepted**: No performance targets for an upgrade" in spec
     assert "Agents asked:" in spec and not [b for b in blockers.find(repo, c, req) if b["code"] == "agent_help"]
+
+
+def test_open_questions_are_answered_in_the_spec(repo: Path) -> None:
+    from agentic_sdlc import questions
+
+    git(repo, "checkout", "-q", "main")
+    c = config.load(repo)
+    req = new_work(repo, c, "CSV export", "feature", [], "x")["req"]
+    spec = repo / "specs" / f"{req}.md"
+    spec.write_text(spec.read_text() + "\n## Open questions\n<!-- Humans answer these. -->\n"
+                    "- [ ] Q1: How is the user identified?\n  **Answer:**\n"
+                    "- [ ] Q2 (AC-11, blocking): Pick one status (a) 413, (b) 422. Also the cap.\n  **Answer:**\n"
+                    "\n## Resolved decisions\n- none\n")
+    info = questions.for_item(repo, state.load(repo, req))
+    assert info["open"] == 2 and info["blocking_open"] == 1
+    assert [o["key"] for o in info["questions"][1]["options"]] == ["a", "b"]
+    client = TestClient(create_app(repo), headers=human.browser_headers())
+    r = client.post(f"/api/items/{req}/questions", json={"answers": {"Q2": "(b) 422, the cap applies after filters"}}).json()
+    assert r["saved"] == ["Q2"] and r["open"] == 1 and r["blocking_open"] == 0
+    text = spec.read_text()
+    assert "- [x] Q2 (AC-11, blocking)" in text and "**Answer:** (b) 422, the cap applies after filters" in text
+    assert "## Resolved decisions" in text and "- [ ] Q1" in text

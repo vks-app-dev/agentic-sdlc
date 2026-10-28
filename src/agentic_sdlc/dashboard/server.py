@@ -14,7 +14,7 @@ from fastapi.responses import HTMLResponse, PlainTextResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from .. import assistant, blockers, config, events, generate, gitops, human, release, standards, state, usage
+from .. import assistant, blockers, config, events, generate, gitops, human, questions, release, standards, state, usage
 from ..cli import _who, new_work, run_human
 from ..cli import defect as defect_item
 from ..stages import STAGES, WORK_TYPES
@@ -78,6 +78,10 @@ class CommitSetup(BaseModel):
 class Answer(BaseModel):
     accepted: bool
     note: str = ""
+
+
+class Answers(BaseModel):
+    answers: dict[str, str]
 
 
 class Retype(BaseModel):
@@ -405,6 +409,23 @@ def create_app(root: Path) -> FastAPI:
     def all_blockers() -> list[dict[str, Any]]:
         """Every open item that needs a person before its agents can start (for "Waiting for you")."""
         return blockers.all_items(root, cfg(), running())
+
+    @app.get("/api/items/{req}/questions")
+    def get_questions(req: str) -> dict[str, Any]:
+        """The open questions the agents left in the stage's document (spec or design), for the review."""
+        return questions.for_item(root, guard(state.load, root, req))
+
+    @app.post("/api/items/{req}/questions", dependencies=[Depends(person)])
+    def answer_questions(req: str, a: Answers) -> dict[str, Any]:
+        """A person answers open questions; the answers are written into the document the agents read."""
+        return guard(questions.answer, root, guard(state.load, root, req), a.answers, _who())
+
+    @app.post("/api/items/{req}/questions/suggest", dependencies=[Depends(person)])
+    async def suggest_answers(req: str) -> dict[str, Any]:
+        r = await asyncio.to_thread(guard, questions.suggest, root, guard(state.load, root, req))
+        events.emit(root, "answers_suggested", req=req, by=_who(),
+                    detail="AI draft" + (f" · ${r['cost_usd']:.2f}" if isinstance(r.get("cost_usd"), (int, float)) else ""))
+        return r
 
     @app.get("/api/items/{req}/spec")
     def spec_form(req: str) -> dict[str, Any]:

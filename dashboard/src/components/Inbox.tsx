@@ -1,14 +1,20 @@
 import { useEffect, useState } from "react";
 import { api, fixApi, since, stageTitle, typeOf, type Blocker, type Item, type PendingRequest, type Project, type WorkTypeName } from "../api";
 import { TypeBadge } from "./Status";
+import { QuestionsPanel } from "./QuestionsPanel";
+import type { Questions } from "../api";
 
 function GateCard({ item, stageTitle, onDone, onOpen }: { item: Item; stageTitle: string; onDone: () => void; onOpen: () => void }) {
   const st = item.stages[item.current_stage!];
   const [comment, setComment] = useState("");
+  const [qs, setQs] = useState<Questions | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
   async function decide(kind: "approve" | "reject" | "reject_run") {
+    if (kind === "approve" && qs?.blocking_open
+        && !confirm(`${qs.blocking_open} blocking question${qs.blocking_open > 1 ? "s have" : " has"} no answer. The next agents will `
+          + "have to assume. Approve anyway?")) return;
     if (kind !== "approve" && !comment.trim()) {
       setErr("Say what the agents should change before sending it back.");
       return;
@@ -43,6 +49,7 @@ function GateCard({ item, stageTitle, onDone, onOpen }: { item: Item; stageTitle
           Review {st.artifacts.length} file{st.artifacts.length === 1 ? "" : "s"} →
         </button>
       </div>
+      <QuestionsPanel req={item.id} compact onChanged={setQs} onSentBack={() => { onDone(); onOpen(); }} />
       <textarea
         placeholder="Comment (required to send back): what should change?"
         value={comment}

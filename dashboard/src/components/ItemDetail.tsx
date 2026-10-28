@@ -3,6 +3,7 @@ import { agentTitle, api, clock, since, typeOf, type ItemDetail as Detail, type 
 import { RunButton, RunLog } from "./RunPanel";
 import { ItemFlow } from "./ItemFlow";
 import { NeedsYou } from "./NeedsYou";
+import { QuestionsPanel } from "./QuestionsPanel";
 import { LiveView } from "./LiveView";
 import { HubView } from "./HubView";
 import { StatusBadge, TypeBadge } from "./Status";
@@ -217,6 +218,10 @@ export function ItemDetail({ id, project, version, openFile, select, refresh, cl
             </div>
           </div>
         </div>
+      )}
+
+      {cur?.status === "awaiting_approval" && (
+        <div className="item-questions"><QuestionsPanel req={item.id} onSentBack={refresh} /></div>
       )}
 
       <NeedsYou req={item.id} blockers={item.blockers ?? []} onFixed={() => { refresh(); api.item(id).then(setItem); }}

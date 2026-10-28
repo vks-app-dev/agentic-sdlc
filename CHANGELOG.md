@@ -7,6 +7,9 @@ same version; `sdlc doctor` warns when they differ.
 
 ### Added
 - Screenshots in the README.
+- Open questions in reviews: the questions agents leave in the spec (or design) show in the review with their
+  options; answer them in place, let AI draft answers to review, then save, or save and send back to the agents.
+  Approving with blocking questions unanswered asks to confirm.
 - ⏸ Pause and ▶ Resume for agent runs: Pause stops the agents and keeps their work; Resume makes interrupted
   tasks ready again and continues the same Claude Code conversation where it stopped. Stop still ends a run. Pausing asks to confirm and
   says what happens; a paused item shows what was kept and which agents were interrupted.

@@ -546,3 +546,16 @@ export const liveApi = {
 
 export const dur = (s: number | null | undefined) =>
   s == null ? "" : s < 60 ? `${s}s` : s < 3600 ? `${Math.floor(s / 60)}m ${s % 60}s` : `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m`;
+
+// ---- Open questions the agents left for the review ----
+
+export interface OpenQuestion {
+  id: string; text: string; answered: boolean; answer: string; blocking: boolean; options: { key: string; label: string }[];
+}
+export interface Questions { file: string | null; questions: OpenQuestion[]; open: number; blocking_open: number; saved?: string[] }
+
+export const qApi = {
+  get: (id: string) => req<Questions>(`/api/items/${id}/questions`),
+  save: (id: string, answers: Record<string, string>) => sendJson<Questions>(`/api/items/${id}/questions`, { answers }),
+  suggest: (id: string) => sendJson<{ answers: Record<string, string>; cost_usd: number | null }>(`/api/items/${id}/questions/suggest`, {}),
+};
