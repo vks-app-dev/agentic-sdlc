@@ -288,6 +288,8 @@ def test_pause_closes_open_agents_and_resume_continues_the_session(repo: Path, m
     assert paused["status"] == "paused" and paused["session_id"] == "sess-42"
     wait_for(lambda: "run_finished" in [e["event"] for e in events.read(repo)])
     assert live_agents(events.read(repo)) == []  # the interrupted sub-agent no longer shows as working
+    info = client.get("/api/items/REQ-001").json()["paused"]
+    assert info["interrupted"] == [{"name": "req-analyst", "task": None}] and info["finished"] == []
     again = client.post("/api/items/REQ-001/resume").json()
     assert "--resume sess-42" in again["command"] and again["resumed_from"] == "sess-42"
     client.post(f"/api/runs/{again['id']}/stop")

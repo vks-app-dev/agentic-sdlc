@@ -294,3 +294,24 @@ def live_view(root: Path, cfg: dict[str, Any], item: dict[str, Any], evs: list[d
     return {"stage": stage, "stages": stages, "title": fs["title"], "lead": fs["lead"], "status": fs["status"],
             "gate": fs["gate"], "orchestrator": orch, "agents": agents, "handoffs": handoffs[-40:][::-1],
             "running": running}
+
+
+def pause_info(evs: list[dict[str, Any]], run: dict[str, Any]) -> dict[str, Any]:
+    """What a paused run had done and what it cut off: sub-agents that finished, and those still working when the
+    person paused (they run again on Resume)."""
+    started, done, cut = None, [], {}
+    for e in evs:
+        if e.get("run") == run["id"] and e["event"] == "run_started":
+            started = e["ts"]
+            continue
+        if started is None or e.get("req") != run["req"]:
+            continue
+        if e.get("run") == run["id"] and e["event"] == "run_finished":
+            break
+        name = (e.get("agent") or "").split(":")[-1]
+        if e["event"] == "agent_start" and e.get("agent_id"):
+            cut[e["agent_id"]] = {"name": name, "task": e.get("task")}
+        elif e["event"] == "agent_stop" and e.get("agent_id") in cut:
+            done.append(cut.pop(e["agent_id"]))
+    return {"finished": done, "interrupted": list(cut.values()), "cost_usd": run.get("cost_usd"),
+            "paused_at": run.get("ended")}

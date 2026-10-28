@@ -1022,3 +1022,15 @@ textarea.ai-drafted { border-color: color-mix(in srgb, var(--accent) 50%, var(--
 .run-state.running { color: var(--running); font-weight: 700; }
 .run-paused { padding: 8px 12px; background: var(--waiting-bg); color: var(--waiting); font-size: 13px; }
 .golive-pill.paused { background: var(--waiting-bg); color: var(--waiting); }
+.pause-confirm { padding: 10px 12px; background: var(--waiting-bg); font-size: 13px; display: flex; gap: 12px; align-items: center;
+  justify-content: space-between; flex-wrap: wrap; border-bottom: 1px solid var(--border); }
+.pause-actions { display: flex; gap: 6px; }
+.paused-banner { margin: 12px 14px 4px; border: 1px solid var(--waiting); background: var(--waiting-bg); border-radius: 12px; padding: 10px 12px; }
+.paused-head { display: flex; gap: 10px; align-items: center; }
+.paused-icon { width: 34px; height: 34px; border-radius: 50%; background: var(--waiting); color: #fff; display: grid; place-items: center;
+  font-size: 15px; flex: none; }
+.paused-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+.paused-grid > div { background: var(--surface); border-radius: 8px; padding: 6px 10px; }
+.paused-agent { font-size: 13px; padding: 1px 0; color: var(--done); }
+.paused-agent.cut { color: var(--waiting); }
+@media (max-width: 700px) { .paused-grid { grid-template-columns: 1fr; } }

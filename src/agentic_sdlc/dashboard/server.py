@@ -321,6 +321,8 @@ def create_app(root: Path) -> FastAPI:
                 "latest_run": latest,
                 "blockers": guard(blockers.find, root, c, req, req in running()),
                 "agents_active": req in running(),
+                "paused": assistant.pause_info(events.read(root), latest)
+                if latest and latest["status"] == "paused" and not run else None,
                 "go_live": release.go_live(c, it, root)}
 
     @app.get("/api/items/{req}/live")

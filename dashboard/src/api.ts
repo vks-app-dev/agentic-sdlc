@@ -116,7 +116,9 @@ export interface ItemDetail extends Item {
   user?: string;
   flow?: FlowStage[];
   last_run?: Run | null;
-  agents_active?: boolean; // agents at work, started here or elsewhere (e.g. from a terminal)
+  agents_active?: boolean;
+  paused?: { finished: { name: string; task?: string | null }[]; interrupted: { name: string; task?: string | null }[];
+             cost_usd?: number | null; paused_at?: string | null } | null; // agents at work, started here or elsewhere (e.g. from a terminal)
   latest_run?: Run | null;
   go_live?: GoLive | null;
   blockers?: Blocker[];

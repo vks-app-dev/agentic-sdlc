@@ -8,6 +8,7 @@ export function RunLog({ run, onClose, onResumed }: { run: Run; onClose: () => v
   const [current, setCurrent] = useState<Run>(run);
   const [busy, setBusy] = useState("");
   const [err, setErr] = useState("");
+  const [confirm, setConfirm] = useState(false);
   useEffect(() => setCurrent(run), [run.id]);
   const box = useRef<HTMLPreElement>(null);
 
@@ -40,7 +41,7 @@ export function RunLog({ run, onClose, onResumed }: { run: Run; onClose: () => v
         {current.status === "running" && (
           <>
             <button className="btn" disabled={!!busy} title="Stop the agents now and keep their work; Resume continues where they were"
-              onClick={() => { setBusy("pause"); setErr(""); api.stopRun(current.id, true).then(setCurrent, (e: Error) => setErr(e.message)).finally(() => setBusy("")); }}>
+              onClick={() => setConfirm(true)}>
               {busy === "pause" ? "Pausing…" : "⏸ Pause"}
             </button>
             <button className="btn danger" disabled={!!busy} title="Stop the agents; the next run starts fresh from the item's current state"
@@ -60,8 +61,24 @@ export function RunLog({ run, onClose, onResumed }: { run: Run; onClose: () => v
       {current.status === "failed" && current.error && (
         <div className="run-error">⚠ {current.error}<ErrorNote message={/sign/i.test(current.error) ? `Claude Code: ${current.error}` : ""} /></div>
       )}
+      {confirm && current.status === "running" && (
+        <div className="pause-confirm">
+          <div>
+            <b>Pause the agents?</b> They stop right away. Everything they have finished is kept. An agent in the middle of
+            a step is cut off and does that step again when you press ▶ Resume, which continues the same conversation.
+          </div>
+          <div className="pause-actions">
+            <button className="btn primary" onClick={() => {
+              setConfirm(false); setBusy("pause"); setErr("");
+              api.stopRun(current.id, true).then(setCurrent, (e: Error) => setErr(e.message)).finally(() => setBusy(""));
+            }}>⏸ Pause now</button>
+            <button className="btn" onClick={() => setConfirm(false)}>Keep running</button>
+          </div>
+        </div>
+      )}
+      {busy === "pause" && <div className="run-paused">Pausing: stopping the agents and keeping their work…</div>}
       {err && <div className="run-error">⚠ {err}</div>}
-      {current.status === "paused" && <div className="run-paused">Paused: the agents stopped and their work so far is kept. ▶ Resume continues the same conversation where it left off.</div>}
+      {current.status === "paused" && <div className="run-paused">⏸ Paused. The agents have stopped and their work so far is kept. ▶ Resume continues the same conversation where it left off.</div>}
       <pre ref={box}>{text || "Starting Claude Code…"}</pre>
     </div>
   );

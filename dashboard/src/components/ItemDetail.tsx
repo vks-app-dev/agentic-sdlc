@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api, clock, since, typeOf, type ItemDetail as Detail, type Project, type Run, type WorkTypeName } from "../api";
+import { agentTitle, api, clock, since, typeOf, type ItemDetail as Detail, type Project, type Run, type WorkTypeName } from "../api";
 import { RunButton, RunLog } from "./RunPanel";
 import { ItemFlow } from "./ItemFlow";
 import { NeedsYou } from "./NeedsYou";
@@ -186,6 +186,38 @@ export function ItemDetail({ id, project, version, openFile, select, refresh, cl
           {item.size && <span>Size {item.size}</span>}
         </div>
       ) : null}
+
+      {item.paused && (
+        <div className="paused-banner">
+          <div className="paused-head">
+            <span className="paused-icon">⏸</span>
+            <div>
+              <b>Agents paused{item.paused.paused_at ? ` ${since(item.paused.paused_at)} ago` : ""}</b>
+              <div className="small">
+                Nothing is running and nothing is lost. Press <b>▶ Resume</b> to carry on from here.
+                {item.paused.cost_usd ? ` This run used $${item.paused.cost_usd.toFixed(2)} so far.` : ""}
+              </div>
+            </div>
+            <span className="spacer" />
+            <button className="btn primary" onClick={() => api.resume(item.id).then((r) => { setLogHidden(false); setLogRun(r); refresh(); },
+              (e: Error) => alert(e.message))}>▶ Resume</button>
+          </div>
+          <div className="paused-grid">
+            <div>
+              <div className="section-label">Kept</div>
+              {item.paused.finished.length ? item.paused.finished.map((a, i) => (
+                <div key={i} className="paused-agent">✓ {agentTitle(a.name)}{a.task ? ` · ${a.task}` : ""}</div>
+              )) : <div className="muted small">Files and decisions written before the pause</div>}
+            </div>
+            <div>
+              <div className="section-label">Interrupted: will run again on Resume</div>
+              {item.paused.interrupted.length ? item.paused.interrupted.map((a, i) => (
+                <div key={i} className="paused-agent cut">↻ {agentTitle(a.name)}{a.task ? ` · ${a.task}` : ""}</div>
+              )) : <div className="muted small">No agent was mid-step</div>}
+            </div>
+          </div>
+        </div>
+      )}
 
       <NeedsYou req={item.id} blockers={item.blockers ?? []} onFixed={() => { refresh(); api.item(id).then(setItem); }}
         onRun={(r) => { setLogHidden(false); setLogRun(r); refresh(); }} openFile={openFile} />
