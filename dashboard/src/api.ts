@@ -114,6 +114,7 @@ export interface ItemDetail extends Item {
   user?: string;
   flow?: FlowStage[];
   last_run?: Run | null;
+  agents_active?: boolean; // agents at work, started here or elsewhere (e.g. from a terminal)
   latest_run?: Run | null;
   go_live?: GoLive | null;
   blockers?: Blocker[];

@@ -185,7 +185,10 @@ def create_app(root: Path) -> FastAPI:
                                      "or `sdlc ...` in a terminal.")
 
     def running() -> set[str]:
-        return {r["req"] for r in runner.list() if r["status"] == "running"}
+        """Items with agents at work: started from the dashboard, or seen working through the hooks (e.g. a run
+        started in a terminal), so their tasks are not mistaken for abandoned ones."""
+        return ({r["req"] for r in runner.list() if r["status"] == "running"}
+                | {a["req"] for a in live_agents(events.read(root)) if a.get("req")})
 
     @app.get("/api/home")
     def home() -> dict[str, Any]:
@@ -310,14 +313,15 @@ def create_app(root: Path) -> FastAPI:
                 "flow": assistant.item_flow(root, c, it, events.read(root)), "user": _who(),
                 "last_run": last if last and last["status"] != "running" else None,
                 "latest_run": latest,
-                "blockers": guard(blockers.find, root, c, req, run is not None),
+                "blockers": guard(blockers.find, root, c, req, req in running()),
+                "agents_active": req in running(),
                 "go_live": release.go_live(c, it, root)}
 
     @app.get("/api/items/{req}/live")
     def item_live(req: str, stage: str | None = None) -> dict[str, Any]:
         """The control-room view of one stage: orchestrator, lead, sub-agents and their handoffs."""
         it = guard(state.load, root, req)
-        return assistant.live_view(root, cfg(), it, events.read(root), stage, runner.active(req) is not None)
+        return assistant.live_view(root, cfg(), it, events.read(root), stage, req in running())
 
     @app.get("/api/go-live")
     def ready_to_go_live() -> list[dict[str, Any]]:

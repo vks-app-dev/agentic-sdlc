@@ -163,7 +163,7 @@ export function ItemDetail({ id, project, version, openFile, select, refresh, cl
           <span className={`golive-pill ${item.go_live.state}`}>
             {item.go_live.state === "live" ? `✓ Live${item.go_live.deployed?.version ? ` · ${item.go_live.deployed.version}` : ""}` : "🚀 Ready to go live"}
           </span>
-        ) : cur?.status === "in_progress" && !item.run && item.status !== "blocked"
+        ) : cur?.status === "in_progress" && !item.run && !item.agents_active && item.status !== "blocked"
           ? <StatusBadge status="pending" text="Started · agents not running" />
           : <StatusBadge status={item.status === "done" ? "done" : item.status === "blocked" ? "blocked" : cur?.status ?? "pending"} />}
         <span className="spacer" />
@@ -201,11 +201,11 @@ export function ItemDetail({ id, project, version, openFile, select, refresh, cl
         </div>
       )}
       {view === "live" && item.flow?.length ? (
-        <HubView req={item.id} flow={item.flow} current={item.current_stage} running={!!item.run} user={item.user ?? ""}
+        <HubView req={item.id} flow={item.flow} current={item.current_stage} running={!!item.run || !!item.agents_active} user={item.user ?? ""}
           goLive={item.go_live} version={version} />
       ) : view === "detail" && item.flow?.length ? (
         <LiveView req={item.id} current={item.current_stage} version={version} user={item.user ?? ""} />
-      ) : item.flow?.length ? <ItemFlow flow={item.flow} user={item.user ?? ""} current={item.current_stage} running={!!item.run}
+      ) : item.flow?.length ? <ItemFlow flow={item.flow} user={item.user ?? ""} current={item.current_stage} running={!!item.run || !!item.agents_active}
         lastRun={item.run ? null : item.last_run ?? null} held={item.blockers?.filter((b) => b.blocking !== false).length ?? 0} goLive={item.go_live} /> : (
       <div className="stepper">
         {stages.map((s) => {

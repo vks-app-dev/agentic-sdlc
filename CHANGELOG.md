@@ -3,6 +3,16 @@
 Agentic SDLC follows semantic versioning. The CLI (`sdlc`) and the Claude Code plugin are released together with the
 same version; `sdlc doctor` warns when they differ.
 
+## [Unreleased]
+
+### Added
+- Screenshots in the README.
+
+### Fixed
+- Agents started outside the dashboard (e.g. from a terminal) count as running: the item no longer says "agents
+  not running", the Live view shows the orchestrator directing, and their tasks are not reported as abandoned.
+- Task IDs keep their case in "needs you" messages.
+
 ## [0.8.0] - 2026-10-28
 
 First public release, under the new name **Agentic SDLC** (was SDLC Pilot). The command is still `sdlc`.

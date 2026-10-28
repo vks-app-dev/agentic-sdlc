@@ -158,7 +158,7 @@ def last_job(root: Path, cfg: dict[str, Any], running: set[str]) -> dict[str, An
            ("await_gate", "human_needed", "human_deploy", "manual") else "waiting")
     title = wt["stage_titles"].get(stage, BY_NAME[stage].title) if stage else "Done"
     message = (f"{len(held)} thing{'s' * (len(held) != 1)} need you before the agents can start: "
-               + "; ".join(b["title"].lower() for b in held) + ".") if held else nxt.get("message") or (
+               + "; ".join(b["title"][:1].lower() + b["title"][1:] for b in held) + ".") if held else nxt.get("message") or (
         f"Agents are working on {title} now." if it["id"] in running else
         f"{title} is {it['stages'][stage]['status'].replace('_', ' ')}: the agents can carry on from where they stopped."
         if can else "")

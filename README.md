@@ -23,6 +23,8 @@ You ask  →  Requirements  →  Design  →  Planning  →  Development  →  Q
 - **Evidence for every step:** specs, designs, plans, test reports, checks, a pull request per work item and
   release notes, all as files in your repo.
 
+![The dashboard's Home: describe what you need, see what your AI team can do, pick up where you left off](docs/images/home.png)
+
 **See it working:** [agentic-sdlc-demo](https://github.com/vks-app-dev/agentic-sdlc-demo) is a small app with
 finished work items you can explore, and requests ready to try.
 
@@ -68,6 +70,27 @@ On **Home**, describe what you need. Agentic SDLC sorts it into a feature, chang
 agents will work on it and where you approve. Press **Create and start the agents**, then watch it on the
 **Board**. In Claude Code you can do the same with `/agentic-sdlc:sdlc-new "title"` and
 `/agentic-sdlc:sdlc-run REQ-001`.
+
+## A look around
+
+**Watch the agents work.** The Live view puts the orchestrator in the centre and every stage around it. The stage
+in focus shows its sub-agents step by step: who is working, what they are doing, and who is waiting.
+
+![Live view: the orchestrator directing each stage, the development lead's sub-agents at work](docs/images/board-live.png)
+
+**Every work item at a glance.** The stages it goes through, each stage's agents and their progress, your reviews
+between stages (✓ once approved), and the go-live step that is always yours.
+
+![Summary view: stages, agents, review checkpoints and go live](docs/images/board-summary.png)
+
+**Your AI team.** One lead per stage and its sub-agents, in the order they run.
+
+![Your AI team: leads and their sub-agents](docs/images/team.png)
+
+**Your rules.** The Library holds the standards and templates agents follow. Review, download or upload your own
+version, or add a new standard or skill for the agents you choose.
+
+![Library: standards, skills and templates](docs/images/library.png)
 
 ## How it works
 
